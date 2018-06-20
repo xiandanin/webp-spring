@@ -1,0 +1,4 @@
+双击webp-start.sh或者将它拖到终端
+执行后在浏览器打开http://localhost:8080
+
+*目前暂时需要java环境

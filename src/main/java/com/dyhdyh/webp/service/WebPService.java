@@ -3,15 +3,15 @@ package com.dyhdyh.webp.service;
 import com.dyhdyh.webp.model.WebPConfig;
 import com.dyhdyh.webp.utils.FileUtils;
 
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
@@ -45,8 +45,7 @@ public class WebPService {
     }
 
     public String imageArray2webp(int quality, long frameInterval, int loopCount, List<String> inputArray, String outputPath) throws IOException {
-        Resource resource = new ClassPathResource("webp/webpmux");
-        File library = resource.getFile();
+        File library = getLibraryFile("webpmux");
         List<String> webpPaths = new ArrayList<>();
         for (String input : inputArray) {
             if (!input.endsWith("webp")) {
@@ -73,8 +72,7 @@ public class WebPService {
     }
 
     public String gif2webp(String inputPath, String outputPath) throws IOException {
-        Resource resource = new ClassPathResource("webp/gif2webp");
-        File library = resource.getFile();
+        File library = getLibraryFile("gif2webp");
         return execute(String.format("%s %s -o %s", library.getAbsolutePath(), inputPath, outputPath));
     }
 
@@ -82,9 +80,25 @@ public class WebPService {
         if (inputPath.endsWith("gif")) {
             return gif2webp(inputPath, outputPath);
         }
-        Resource resource = new ClassPathResource("webp/cwebp");
-        File library = resource.getFile();
+        File library = getLibraryFile("cwebp");
         return execute(String.format("%s -q %d %s -o %s", library.getAbsolutePath(), quality, inputPath, outputPath));
+    }
+
+    private File getLibraryFile(String libraryName) {
+        String parentPath = ClassUtils.getDefaultClassLoader().getResource("").getPath();
+        File classParentFile = new File(parentPath);
+        File parentFile = new File(classParentFile.getParentFile().getParentFile().getParentFile().getParentFile(),"libs");
+        if (!parentFile.exists()){
+            parentFile.mkdirs();
+        }
+        InputStream stream = getClass().getClassLoader().getResourceAsStream("webp/" + libraryName);
+        File targetFile = new File(parentFile, libraryName);
+        if (!targetFile.exists() && targetFile.length() <= 0) {
+            System.out.println("复制库文件-->"+targetFile);
+            FileUtils.inputStream2file(stream, targetFile);
+            execute("chmod 777 " + targetFile.getAbsolutePath());
+        }
+        return targetFile;
     }
 
     private String execute(String command) {
