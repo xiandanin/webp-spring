@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>WebP</title>
+
+    <link href="https://cdn.bootcss.com/element-ui/2.4.0/theme-chalk/index.css" rel="stylesheet">
+
+    <script src="https://cdn.bootcss.com/vue/2.5.16/vue.min.js"></script>
+    <script src="https://cdn.bootcss.com/vue-resource/1.5.0/vue-resource.min.js"></script>
+    <script src="https://cdn.bootcss.com/element-ui/2.4.0/index.js"></script>
+</head>
+<style>
+    #upload_view .el-upload, .el-upload-dragger {
+        width: 100%;
+    }
+
+    .el-main {
+        padding-bottom: 0px;
+    }
+
+    #config-container input[type="number"] {
+        width: 100px;
+        text-align: center;
+    }
+    #config-output .el-input input{
+        min-width: 320px;
+    }
+
+</style>
+<body>
+
+<div id="app" style="margin: 40px 1% 1% 1%">
+    <el-container direction="vertical">
+        <el-main>
+            <div id="config-container" style="text-align: right">
+                <div>
+                    <el-form :inline="true" size="mini" :model="config">
+
+                        <el-form-item label="输出文件夹">
+                            <div id="config-output">
+                                <el-input v-model="config.outputDir">
+                                </el-input>
+                            </div>
+                        </el-form-item>
+
+                        <el-tooltip content="输出质量：1-100" placement="top-start" effect="light"
+                                    :enterable="false">
+                            <el-form-item label="质量">
+                                <el-input v-model="config.quality" placeholder="1-100" min="1"
+                                          max="100" type="number"></el-input>
+                            </el-form-item>
+                        </el-tooltip>
+
+                        <el-tooltip content="勾选会将上传的序列帧转换一张动态webp，否则转换相同数量的webp序列帧"
+                                    placement="top"
+                                    effect="light" :enterable="false">
+                            <el-checkbox v-model="config.anim">动态
+                            </el-checkbox>
+                        </el-tooltip>
+                    </el-form>
+                </div>
+                <div v-show="config.anim">
+                    <el-form :inline="true" size="mini" :model="config">
+                        <el-form-item label="帧间隔(毫秒)">
+                            <el-input v-model="config.frameInterval"
+                                      min="0"
+                                      :placeholder="config.frameInterval"
+                                      type="number"></el-input>
+                        </el-form-item>
+
+                        <el-tooltip content="0 = 无限循环" placement="bottom-start" effect="light"
+                                    :enterable="false">
+                            <el-form-item label="循环次数">
+                                <el-input v-model="config.loopCount"
+                                          min="0"
+                                          :placeholder="config.loopCount"
+                                          type="number"></el-input>
+                            </el-form-item>
+                        </el-tooltip>
+                    </el-form>
+                </div>
+                <div>
+                    <el-button size="small" type="primary" @click="handleClear">清空
+                    </el-button>
+                    <el-button size="small" type="primary" @click="handleStartWebp">转换
+                    </el-button></div>
+            </div>
+        </el-main>
+        <el-container direction="horizontal">
+            <div style="width: 50%">
+                <el-main>
+                    <div>
+                        <div v-show="uploadFileList.length>0">
+                            <el-table
+                                    border
+                                    size="mini"
+                                    :data="uploadFileList"
+                                    style="width: 100%">
+                                <el-table-column
+                                        prop="name"
+                                        label="文件名">
+                                </el-table-column>
+                                <el-table-column
+                                        prop="size"
+                                        width="100"
+                                        align="right"
+                                        :formatter="formatFileSize"
+                                        label="大小">
+                                </el-table-column>
+                                <el-table-column
+                                        align="center"
+                                        width="70"
+                                        label="操作">
+                                    <template slot-scope="scope">
+                                        <a @click="handleRemoveUpload(scope.$index)" href="#">移除
+                                        </a>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </div>
+                        <div v-show="uploadFileList.length<=0" id="upload_view">
+                            <el-upload
+                                    drag
+                                    multiple
+                                    :show-file-list="false"
+                                    :on-change="handleUploadChange"
+                                    :file-list="uploadFileList"
+                                    :auto-upload="false">
+                                <i class="el-icon-upload"></i>
+                                <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+                            </el-upload>
+                        </div>
+                    </div>
+                </el-main>
+            </div>
+
+            <div style="width: 50%">
+                <el-main>
+                    <div>
+                        <el-table
+                                border
+                                size="mini"
+                                :data="outputResultList"
+                                style="width: 100%">
+                            <el-table-column
+                                    label="状态"
+                                    align="center"
+                                    width="100">
+                                <template slot-scope="scope">
+                                    <el-tooltip effect="light" :content="scope.row.result"
+                                                placement="top">
+                                        <span v-if="scope.row.success">转换成功</span>
+                                        <span v-else style="color: red">转换失败</span>
+                                        <div slot="content" v-html="scope.row.result"
+                                             style="font-size: 16px">
+                                        </div>
+                                    </el-tooltip>
+                                </template>
+                            </el-table-column>
+
+                            <el-table-column
+                                    label="输出路径">
+                                <template slot-scope="scope">
+                                    <a @click="handleOpenFolder(scope.row.outputPath)" href="#">{{scope.row.outputPath}}</a>
+                                </template>
+                            </el-table-column>
+
+                            <el-table-column
+                                    align="right"
+                                    label="转换时间"
+                                    prop="outputTime"
+                                    width="150">
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                </el-main>
+            </div>
+        </el-container>
+    </el-container>
+</div>
+
+<script th:inline="javascript">
+    new Vue({
+        el: '#app',
+        data: {
+            config: null,
+            uploadFileList: [],
+            outputResultList: []
+        },
+        mounted: function () {
+            this.config = [[${config}]];
+        },
+        methods: {
+            formatFileSize(row, column) {
+                var bytes = row.size
+                if (bytes === 0) return '0 B';
+                var k = 1000, // or 1024
+                    sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
+                    i = Math.floor(Math.log(bytes) / Math.log(k));
+
+                return (bytes / Math.pow(k, i)).toPrecision(3) + ' ' + sizes[i];
+            },
+            handleUploadChange(file, fileList) {
+                console.log(file)
+                Vue.set(this, "uploadFileList", fileList)
+            },
+            handleRemoveUpload(index) {
+                this.uploadFileList.splice(index, 1)
+            },
+            handleStartWebp() {
+                let uploadData = new FormData()
+                for (var i = 0; i < this.uploadFileList.length; i++) {
+                    uploadData.append('files', this.uploadFileList[i].raw)
+                }
+                uploadData.append("quality", this.config.quality);
+                uploadData.append("outputDir", this.config.outputDir);
+                uploadData.append("anim", this.config.anim);
+                uploadData.append("duration", this.config.duration);
+                uploadData.append("loopCount", this.config.loopCount);
+                this.$http.post('/handle', uploadData)
+                    .then(function (response) {
+                        Vue.set(this, "outputResultList", response.body)
+                    }).catch(function (response) {
+                    // 请求失败回调
+                });
+            },
+            handleClear() {
+                this.uploadFileList.splice(0, this.uploadFileList.length);
+                this.outputResultList.splice(0, this.outputResultList.length);
+            },
+            handleOpenFolder(outputPath) {
+                this.$http.get('/open-folder?path=' + outputPath)
+                    .then(function (response) {
+
+                    }).catch(function (response) {
+
+                });
+            }
+        }
+    })
+</script>
+</body>
+</html>
