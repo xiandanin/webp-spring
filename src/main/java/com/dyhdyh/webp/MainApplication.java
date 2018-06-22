@@ -11,11 +11,10 @@ import org.springframework.context.annotation.ComponentScan;
  */
 @EnableAutoConfiguration
 @SpringBootApplication
-@ComponentScan(basePackages = {"com.dyhdyh.webp.controller", "com.dyhdyh.webp.service"})
-public class MainApplication {
+@ComponentScan(basePackages = {"com.dyhdyh.webp.controller", "com.dyhdyh.webp.service", "com.dyhdyh.webp.config"})
+public class MainApplication extends SpringApplication{
 
     public static void main(String[] args) throws Exception {
         SpringApplication.run(MainApplication.class, args);
     }
-
 }

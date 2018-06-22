@@ -23,8 +23,9 @@
         width: 100px;
         text-align: center;
     }
-    #config-output .el-input input{
-        min-width: 320px;
+
+    #config-output .el-input input {
+        min-width: 450px;
     }
 
 </style>
@@ -81,17 +82,24 @@
                     </el-form>
                 </div>
                 <div>
-                    <el-button size="small" type="primary" @click="handleClear">清空
+                    <el-tooltip content="不勾选会自动清除缓存(不影响输出文件)"
+                                placement="top"
+                                effect="light" :enterable="false">
+                        <el-checkbox v-model="config.keepCache">保留缓存
+                        </el-checkbox>
+                    </el-tooltip>
+                    <el-button size="mini" type="warning" @click="handleClear">清空面板
                     </el-button>
-                    <el-button size="small" type="primary" @click="handleStartWebp">转换
-                    </el-button></div>
+                    <el-button size="mini" type="primary" @click="handleStartWebp">开始转换
+                    </el-button>
+                </div>
             </div>
         </el-main>
         <el-container direction="horizontal">
             <div style="width: 50%">
                 <el-main>
                     <div>
-                        <div v-show="uploadFileList.length>0">
+                        <div v-show="uploadFileList.length>0" style="margin-bottom: 2%">
                             <el-table
                                     border
                                     size="mini"
@@ -119,7 +127,7 @@
                                 </el-table-column>
                             </el-table>
                         </div>
-                        <div v-show="uploadFileList.length<=0" id="upload_view">
+                        <div id="upload_view">
                             <el-upload
                                     drag
                                     multiple
@@ -218,6 +226,7 @@
                 uploadData.append("anim", this.config.anim);
                 uploadData.append("duration", this.config.duration);
                 uploadData.append("loopCount", this.config.loopCount);
+                uploadData.append("keepCache", this.config.keepCache);
                 this.$http.post('/handle', uploadData)
                     .then(function (response) {
                         Vue.set(this, "outputResultList", response.body)

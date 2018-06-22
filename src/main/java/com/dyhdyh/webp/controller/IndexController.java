@@ -1,5 +1,6 @@
 package com.dyhdyh.webp.controller;
 
+import com.dyhdyh.webp.config.ApplicationConfig;
 import com.dyhdyh.webp.model.ResultModel;
 import com.dyhdyh.webp.model.WebPConfig;
 import com.dyhdyh.webp.service.WebPService;
@@ -34,6 +35,9 @@ public class IndexController {
     @Autowired
     WebPService service;
 
+    @Autowired
+    ApplicationConfig appConfig;
+
     @RequestMapping("/")
     String index(Model model) {
         WebPConfig config = service.defaultConfig();
@@ -44,13 +48,13 @@ public class IndexController {
     @RequestMapping(value = "/handle", method = RequestMethod.POST)
     @ResponseBody
     List<ResultModel> handle(HttpServletRequest request, @RequestPart(value = "files") List<MultipartFile> files, WebPConfig config) {
-        //File rootDir = new File(config.getOutputDir(),"webp");
+        service.setOutputDir(config.getOutputDir());
         File rootDir = new File(config.getOutputDir());
         if (!rootDir.exists()) {
             rootDir.mkdirs();
         }
 
-        File tempDir = new File(rootDir, "cache");
+        File tempDir = new File(appConfig.getPackageDir(), "cache");
         if (!tempDir.exists()) {
             tempDir.mkdirs();
         }
@@ -87,16 +91,10 @@ public class IndexController {
             e.printStackTrace();
         }
 
-        /*
-        //删除临时文件
-        for (String cache : cacheFiles) {
-            new File(cache).delete();
+        if (!config.isKeepCache()) {
+            //删除临时文件
+            FileUtils.deleteDir(tempDir);
         }
-        //如果临时文件夹是空的 文件夹也删除
-        if (tempDir.listFiles().length <= 0) {
-            tempDir.delete();
-        }
-        */
         return result;
     }
 

@@ -1,10 +1,11 @@
 package com.dyhdyh.webp.service;
 
+import com.dyhdyh.webp.config.ApplicationConfig;
 import com.dyhdyh.webp.model.WebPConfig;
 import com.dyhdyh.webp.utils.FileUtils;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
 import java.io.BufferedReader;
@@ -23,21 +24,32 @@ import java.util.List;
  */
 @Service
 public class WebPService {
-    private WebPConfig mDefaultConfig;
+    @Autowired
+    ApplicationConfig appConfig;
+
+    private WebPConfig mWebpConfig;
 
     public WebPConfig defaultConfig() {
-        if (mDefaultConfig == null) {
-            mDefaultConfig = new WebPConfig();
-            mDefaultConfig.setQuality(80);
+        if (mWebpConfig == null) {
+            mWebpConfig = new WebPConfig();
+            mWebpConfig.setQuality(80);
 
-            String currentUser = System.getProperty("user.name");
-            String mac = String.format("/Users/%s/Downloads/webp", currentUser);
-            String windows = String.format("D:/");
-            mDefaultConfig.setOutputDir(mac);
+            //String currentUser = System.getProperty("user.name");
+            //String output = String.format("/Users/%s/Downloads/webp", currentUser);
+            String defaultOutput = String.format("%s/output", appConfig.getPackageDir());
+            String output = appConfig.getOutputDir();
+            mWebpConfig.setOutputDir(StringUtils.isEmpty(output) ? defaultOutput : output);
+            mWebpConfig.setKeepCache(true);
 
-            mDefaultConfig.setFrameInterval(100);
+            mWebpConfig.setFrameInterval(100);
         }
-        return mDefaultConfig;
+        return mWebpConfig;
+    }
+
+
+    public void setOutputDir(String outputDir) {
+        appConfig.saveOutputDir(outputDir);
+        mWebpConfig.setOutputDir(outputDir);
     }
 
     public String imageArray2webp(WebPConfig config, List<String> inputArray, String outputPath) throws IOException {
@@ -85,16 +97,15 @@ public class WebPService {
     }
 
     private File getLibraryFile(String libraryName) {
-        String parentPath = ClassUtils.getDefaultClassLoader().getResource("").getPath();
-        File classParentFile = new File(parentPath);
-        File parentFile = new File(classParentFile.getParentFile().getParentFile().getParentFile().getParentFile(),"libs");
-        if (!parentFile.exists()){
+        File rootFile = appConfig.getPackageDir();
+        File parentFile = new File(rootFile, "libs");
+        if (!parentFile.exists()) {
             parentFile.mkdirs();
         }
         InputStream stream = getClass().getClassLoader().getResourceAsStream("webp/" + libraryName);
         File targetFile = new File(parentFile, libraryName);
         if (!targetFile.exists() && targetFile.length() <= 0) {
-            System.out.println("复制库文件-->"+targetFile);
+            System.out.println("复制库文件-->" + targetFile);
             FileUtils.inputStream2file(stream, targetFile);
             execute("chmod 777 " + targetFile.getAbsolutePath());
         }

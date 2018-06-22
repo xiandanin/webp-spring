@@ -12,6 +12,15 @@ public class WebPConfig  implements Serializable {
     private boolean anim;
     private long frameInterval;
     private int loopCount;
+    private boolean keepCache;//保留缓存
+
+    public boolean isKeepCache() {
+        return keepCache;
+    }
+
+    public void setKeepCache(boolean keepCache) {
+        this.keepCache = keepCache;
+    }
 
     public int getLoopCount() {
         return loopCount;
